@@ -144,11 +144,12 @@ export const findFirstImageInFolder = async (folderId: string): Promise<DriveFil
   return null;
 };
 
-export const copyFile = async (fileId: string, destinationFolderId: string): Promise<any> => {
+export const copyFile = async (fileId: string, fileName: string, destinationFolderId: string): Promise<any> => {
   try {
     const response = await gapi.client.drive.files.copy({
       fileId: fileId,
       resource: {
+        name: fileName, // This was the missing piece
         parents: [destinationFolderId]
       }
     });
