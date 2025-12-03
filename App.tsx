@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Edit3, Cloud, RefreshCw, Play, ArrowRight, Zap, Info, Loader2, Database, Trash2, Folder } from 'lucide-react';
 import { CloudProvider, SyncTask, SyncMode, ProviderType } from './types';
 import { CloudSelectorModal } from './components/CloudSelectorModal';
-import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId, findFirstImageInFolder, copyFile } from './services/googleDriveService';
+import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId, listImageFiles, copyFile, listFileNamesInFolder } from './services/googleDriveService';
 
 const App: React.FC = () => {
   // State
@@ -53,23 +53,40 @@ const App: React.FC = () => {
     
     setIsSyncing(true);
     try {
-      // 1. Find the first image in the source folder
-      const imageToCopy = await findFirstImageInFolder(source.selectedFolder.id);
+      // 1. Get all image files from the source folder
+      const sourceImages = await listImageFiles(source.selectedFolder.id);
 
-      if (!imageToCopy) {
+      if (sourceImages.length === 0) {
         alert("No image files found in the source folder to sync.");
-        setIsSyncing(false);
+        return;
+      }
+      
+      // 2. Get all file names from the destination folder for quick lookup
+      const destFileNames = await listFileNamesInFolder(destination.selectedFolder.id);
+
+      // 3. Filter out images that already exist in the destination
+      const filesToCopy = sourceImages.filter(image => !destFileNames.has(image.name));
+
+      if (filesToCopy.length === 0) {
+        alert("All images are already synced. No new files to copy.");
         return;
       }
 
-      // 2. Copy the file to the destination folder, now including the file's name
-      await copyFile(imageToCopy.id, imageToCopy.name, destination.selectedFolder.id);
+      // 4. Create an array of copy promises to run them in parallel
+      const copyPromises = filesToCopy.map(file => 
+        copyFile(file.id, file.name, destination.selectedFolder.id)
+      );
+      
+      // 5. Execute all copy operations
+      await Promise.all(copyPromises);
 
-      alert(`Successfully copied "${imageToCopy.name}" to the destination folder!`);
+      alert(`Successfully synced ${filesToCopy.length} new image(s) to the destination folder!`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sync failed:", error);
-      alert(`An error occurred during sync: ${error.message || 'Unknown error'}`);
+      // Enhanced error reporting
+      const errorMessage = error?.result?.error?.message || error.message || JSON.stringify(error);
+      alert(`An error occurred during sync: ${errorMessage}`);
     } finally {
       setIsSyncing(false);
     }
