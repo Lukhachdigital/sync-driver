@@ -6,7 +6,8 @@ declare var google: any;
 let CLIENT_ID = ''; 
 const API_KEY = ''; // Optional: Use if you have a public API key
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+// IMPORTANT: Changed scope to allow file creation/copying, not just reading.
+const SCOPES = 'https://www.googleapis.com/auth/drive';
 
 let tokenClient: any = null;
 let gapiInited = false;
@@ -96,6 +97,9 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
         return reject(resp);
       }
       
+      // Set the token for gapi client to use
+      gapi.client.setToken({ access_token: resp.access_token });
+      
       let email = 'Google User';
       try {
         const userInfo = await gapi.client.drive.about.get({
@@ -117,17 +121,40 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
   });
 };
 
-export const listFiles = async (folderId: string = 'root'): Promise<DriveFile[]> => {
+export const listFiles = async (folderId: string = 'root', queryExtra: string = ''): Promise<DriveFile[]> => {
   try {
     const response = await gapi.client.drive.files.list({
-      'pageSize': 20,
+      'pageSize': 100, // Increased page size
       'fields': "nextPageToken, files(id, name, mimeType, iconLink, thumbnailLink)",
-      'q': `'${folderId}' in parents and trashed = false`,
+      'q': `'${folderId}' in parents and trashed = false ${queryExtra}`,
       'orderBy': 'folder, name'
     });
     return response.result.files;
   } catch (err) {
     console.error("Error listing files", err);
+    throw err;
+  }
+};
+
+export const findFirstImageInFolder = async (folderId: string): Promise<DriveFile | null> => {
+  const imageFiles = await listFiles(folderId, "and mimeType contains 'image/'");
+  if (imageFiles && imageFiles.length > 0) {
+    return imageFiles[0];
+  }
+  return null;
+};
+
+export const copyFile = async (fileId: string, destinationFolderId: string): Promise<any> => {
+  try {
+    const response = await gapi.client.drive.files.copy({
+      fileId: fileId,
+      resource: {
+        parents: [destinationFolderId]
+      }
+    });
+    return response.result;
+  } catch (err) {
+    console.error("Error copying file:", err);
     throw err;
   }
 };
