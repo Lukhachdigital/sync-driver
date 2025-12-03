@@ -62,8 +62,8 @@ const App: React.FC = () => {
         return;
       }
 
-      // 2. Copy the file to the destination folder
-      await copyFile(imageToCopy.id, destination.selectedFolder.id);
+      // 2. Copy the file to the destination folder, now including the file's name
+      await copyFile(imageToCopy.id, imageToCopy.name, destination.selectedFolder.id);
 
       alert(`Successfully copied "${imageToCopy.name}" to the destination folder!`);
 
@@ -123,6 +123,72 @@ const App: React.FC = () => {
     return null;
   };
 
+  const renderSelectedCard = (provider: CloudProvider, type: 'source' | 'destination') => {
+    const isSource = type === 'source';
+    const theme = {
+      bg: isSource ? 'bg-blue-50/30' : 'bg-purple-50/30',
+      border: isSource ? 'border-blue-100 hover:border-blue-300' : 'border-purple-100 hover:border-purple-300',
+      iconContainerBorder: isSource ? 'border-blue-100' : 'border-purple-100',
+      iconColor: isSource ? 'text-blue-600' : 'text-purple-600',
+      folderBorder: isSource ? 'border-blue-200' : 'border-purple-200',
+      folderIconColor: isSource ? 'text-blue-500' : 'text-purple-500',
+      labelBg: isSource ? 'bg-blue-100' : 'bg-purple-100',
+      labelColor: isSource ? 'text-blue-700' : 'text-purple-700',
+      icon: isSource ? <Database className="w-10 h-10 text-blue-600" /> : <Cloud className="w-10 h-10 text-purple-600" />,
+      label: isSource ? 'SOURCE' : 'DESTINATION'
+    };
+
+    return (
+      <div
+        onClick={() => openSelector(type)}
+        className={`relative flex-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-8 group ${theme.bg} ${theme.border}`}
+      >
+        <div className="absolute top-4 right-4">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isSource) setSource(null);
+              else setDestination(null);
+            }}
+            className="p-1.5 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+        <div className={`w-20 h-20 bg-white rounded-2xl shadow-sm border ${theme.iconContainerBorder} flex items-center justify-center mb-6`}>
+          {theme.icon}
+        </div>
+        <h3 className="text-xl font-bold text-slate-800 mb-1">{provider.name}</h3>
+        <p className="text-slate-500 text-sm mb-4">{provider.email}</p>
+        <div className={`w-full bg-white rounded border ${theme.folderBorder} p-3 flex items-center gap-2 text-sm text-slate-600`}>
+          <Folder className={`w-4 h-4 ${theme.folderIconColor}`} />
+          <span className="truncate">{provider.selectedFolder?.path || 'Root Folder'}</span>
+        </div>
+        <div className={`mt-6 flex items-center gap-2 text-xs font-medium ${theme.labelColor} ${theme.labelBg} px-3 py-1 rounded-full`}>
+          {theme.label}
+        </div>
+      </div>
+    );
+  };
+
+  const renderEmptyCard = (type: 'source' | 'destination') => {
+    const isSource = type === 'source';
+    return (
+      <div
+        onClick={() => openSelector(type)}
+        className="relative flex-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-8 group bg-slate-50/50 border-dashed border-slate-300 hover:border-primary-400 hover:bg-slate-50"
+      >
+        <div className="w-20 h-20 rounded-full border-2 border-slate-300 border-dashed flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-primary-400 group-hover:text-primary-500 text-slate-300 transition-all duration-300">
+          <span className="text-4xl font-light pb-1">+</span>
+        </div>
+        <h3 className="text-2xl font-semibold text-slate-400 group-hover:text-primary-600 transition-colors">{isSource ? 'FROM' : 'TO'}</h3>
+        <p className="text-slate-400 mt-3 text-sm text-center max-w-[200px] leading-relaxed">
+          Select {isSource ? 'Source' : 'Target'} Drive & Folder
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F7FA] text-slate-800 font-sans selection:bg-primary-100">
       <CloudSelectorModal 
@@ -177,52 +243,7 @@ const App: React.FC = () => {
               
               {/* SOURCE CARD */}
               <div className="flex-1 w-full h-full flex flex-col">
-                <div 
-                  onClick={() => openSelector('source')}
-                  className={`relative flex-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-8 group
-                    ${source 
-                      ? 'bg-blue-50/30 border-blue-100 hover:border-blue-300' 
-                      : 'bg-slate-50/50 border-dashed border-slate-300 hover:border-primary-400 hover:bg-slate-50'
-                    }`}
-                >
-                  {source ? (
-                    <>
-                      <div className="absolute top-4 right-4">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setSource(null); }}
-                          className="p-1.5 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-blue-100 flex items-center justify-center mb-6">
-                        <Database className="w-10 h-10 text-blue-600" />
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-1">{source.name}</h3>
-                      <p className="text-slate-500 text-sm mb-4">{source.email}</p>
-                      
-                      {/* Selected Path Visualization */}
-                      <div className="w-full bg-white rounded border border-blue-200 p-3 flex items-center gap-2 text-sm text-slate-600">
-                        <Folder className="w-4 h-4 text-blue-500" />
-                        <span className="truncate">{source.selectedFolder?.path || 'Root Folder'}</span>
-                      </div>
-                      
-                      <div className="mt-6 flex items-center gap-2 text-xs font-medium text-blue-700 bg-blue-100 px-3 py-1 rounded-full">
-                         SOURCE
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-20 h-20 rounded-full border-2 border-slate-300 border-dashed flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-primary-400 group-hover:text-primary-500 text-slate-300 transition-all duration-300">
-                        <span className="text-4xl font-light pb-1">+</span>
-                      </div>
-                      <h3 className="text-2xl font-semibold text-slate-400 group-hover:text-primary-600 transition-colors">FROM</h3>
-                      <p className="text-slate-400 mt-3 text-sm text-center max-w-[200px] leading-relaxed">
-                        Select Source Drive & Folder
-                      </p>
-                    </>
-                  )}
-                </div>
+                {source ? renderSelectedCard(source, 'source') : renderEmptyCard('source')}
               </div>
 
               {/* CENTER CONTROLS */}
@@ -251,52 +272,7 @@ const App: React.FC = () => {
 
               {/* DESTINATION CARD */}
               <div className="flex-1 w-full h-full flex flex-col">
-                <div 
-                  onClick={() => openSelector('destination')}
-                  className={`relative flex-1 rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center p-8 group
-                    ${destination 
-                      ? 'bg-purple-50/30 border-purple-100 hover:border-purple-300' 
-                      : 'bg-slate-50/50 border-dashed border-slate-300 hover:border-primary-400 hover:bg-slate-50'
-                    }`}
-                >
-                   {destination ? (
-                    <>
-                      <div className="absolute top-4 right-4">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setDestination(null); }}
-                          className="p-1.5 hover:bg-red-50 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="w-20 h-20 bg-white rounded-2xl shadow-sm border border-purple-100 flex items-center justify-center mb-6">
-                        <Cloud className="w-10 h-10 text-purple-600" />
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-1">{destination.name}</h3>
-                      <p className="text-slate-500 text-sm mb-4">{destination.email}</p>
-                      
-                      {/* Selected Path Visualization */}
-                      <div className="w-full bg-white rounded border border-purple-200 p-3 flex items-center gap-2 text-sm text-slate-600">
-                        <Folder className="w-4 h-4 text-purple-500" />
-                        <span className="truncate">{destination.selectedFolder?.path || 'Root Folder'}</span>
-                      </div>
-
-                      <div className="mt-6 flex items-center gap-2 text-xs font-medium text-purple-700 bg-purple-100 px-3 py-1 rounded-full">
-                         DESTINATION
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-20 h-20 rounded-full border-2 border-slate-300 border-dashed flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-primary-400 group-hover:text-primary-500 text-slate-300 transition-all duration-300">
-                        <span className="text-4xl font-light pb-1">+</span>
-                      </div>
-                      <h3 className="text-2xl font-semibold text-slate-400 group-hover:text-primary-600 transition-colors">TO</h3>
-                      <p className="text-slate-400 mt-3 text-sm text-center max-w-[200px] leading-relaxed">
-                        Select Target Drive & Folder
-                      </p>
-                    </>
-                  )}
-                </div>
+                {destination ? renderSelectedCard(destination, 'destination') : renderEmptyCard('destination')}
               </div>
 
            </div>
