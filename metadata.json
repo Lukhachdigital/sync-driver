@@ -1,0 +1,5 @@
+{
+  "name": "CloudSync Pro",
+  "description": "A professional cloud synchronization tool supporting Google Drive, Dropbox, and OneDrive with AI-powered sync analysis.",
+  "requestFramePermissions": []
+}
