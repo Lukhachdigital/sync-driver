@@ -121,27 +121,36 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
   });
 };
 
-export const listFiles = async (folderId: string = 'root', queryExtra: string = ''): Promise<DriveFile[]> => {
+export const listFiles = async (folderId: string = 'root', queryExtra: string = '', fields: string = "nextPageToken, files(id, name, mimeType, iconLink, thumbnailLink)"): Promise<DriveFile[]> => {
   try {
     const response = await gapi.client.drive.files.list({
-      'pageSize': 100, // Increased page size
-      'fields': "nextPageToken, files(id, name, mimeType, iconLink, thumbnailLink)",
+      'pageSize': 1000, // Increased page size for fewer calls
+      'fields': fields,
       'q': `'${folderId}' in parents and trashed = false ${queryExtra}`,
       'orderBy': 'folder, name'
     });
-    return response.result.files;
+    return response.result.files || [];
   } catch (err) {
     console.error("Error listing files", err);
     throw err;
   }
 };
 
-export const findFirstImageInFolder = async (folderId: string): Promise<DriveFile | null> => {
-  const imageFiles = await listFiles(folderId, "and mimeType contains 'image/'");
-  if (imageFiles && imageFiles.length > 0) {
-    return imageFiles[0];
+export const listImageFiles = async (folderId: string): Promise<DriveFile[]> => {
+  return await listFiles(folderId, "and mimeType contains 'image/'");
+};
+
+export const listFileNamesInFolder = async (folderId: string): Promise<Set<string>> => {
+  const files = await listFiles(folderId, "", "files(name)");
+  const names = new Set<string>();
+  if (files) {
+    for (const file of files) {
+      if(file.name) {
+         names.add(file.name);
+      }
+    }
   }
-  return null;
+  return names;
 };
 
 export const copyFile = async (fileId: string, fileName: string, destinationFolderId: string): Promise<any> => {
@@ -149,13 +158,13 @@ export const copyFile = async (fileId: string, fileName: string, destinationFold
     const response = await gapi.client.drive.files.copy({
       fileId: fileId,
       resource: {
-        name: fileName, // This was the missing piece
+        name: fileName,
         parents: [destinationFolderId]
       }
     });
     return response.result;
   } catch (err) {
-    console.error("Error copying file:", err);
+    console.error(`Error copying file: ${fileName} (ID: ${fileId}). Details:`, JSON.stringify(err, null, 2));
     throw err;
   }
 };
