@@ -25,13 +25,20 @@ const App: React.FC = () => {
 
   // Initialize Google API on mount
   useEffect(() => {
-    initializeGoogleApi(() => {
-      console.log("Google API initialized");
-    });
+    const initApi = async () => {
+      try {
+        await initializeGoogleApi();
+        console.log("Google API initialized");
+        if (googleClientId) {
+          setServiceClientId(googleClientId);
+        }
+      } catch (error) {
+        console.error("Fatal error initializing Google API:", error);
+        alert("Could not initialize Google services. Please check your internet connection or ad-blocker and refresh the page.");
+      }
+    };
     
-    if (googleClientId) {
-      setServiceClientId(googleClientId);
-    }
+    initApi();
   }, [googleClientId]);
 
   // Handlers

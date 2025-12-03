@@ -14,8 +14,7 @@ let gisInited = false;
 
 export const setClientId = (id: string) => {
   CLIENT_ID = id;
-  // If scripts are loaded, we can try to init (or re-init) the token client now
-  if (gisInited && CLIENT_ID) {
+  if (gisInited && CLIENT_ID && !tokenClient) {
      initTokenClient();
   }
 };
@@ -34,28 +33,39 @@ const initTokenClient = () => {
     }
 }
 
-export const initializeGoogleApi = async (onLoad: () => void) => {
-  const gapiLoaded = new Promise<void>((resolve) => {
-    // Wait for gapi to be defined
+export const initializeGoogleApi = async (): Promise<void> => {
+  const gapiLoaded = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+        clearInterval(checkGapi);
+        reject(new Error("gapi script failed to load in 10 seconds. Check ad-blockers or network."));
+    }, 10000);
+
     const checkGapi = setInterval(() => {
-        if (typeof gapi !== 'undefined') {
+        if (typeof gapi !== 'undefined' && gapi.load) {
             clearInterval(checkGapi);
-            gapi.load('client', async () => {
-              await gapi.client.init({
+            clearTimeout(timeout);
+            gapi.load('client', () => {
+              gapi.client.init({
                 discoveryDocs: DISCOVERY_DOCS,
-              });
-              gapiInited = true;
-              resolve();
+              }).then(() => {
+                gapiInited = true;
+                resolve();
+              }).catch((err: any) => reject(new Error(`GAPI client init failed: ${err.message}`)));
             });
         }
     }, 100);
   });
 
-  const gisLoaded = new Promise<void>((resolve) => {
-    // Wait for google accounts script to be defined
+  const gisLoaded = new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+        clearInterval(checkGis);
+        reject(new Error("GIS script failed to load in 10 seconds. Check ad-blockers or network."));
+    }, 10000);
+    
     const checkGis = setInterval(() => {
         if (typeof google !== 'undefined' && google.accounts && google.accounts.oauth2) {
             clearInterval(checkGis);
+            clearTimeout(timeout);
             gisInited = true;
             if (CLIENT_ID) {
                 initTokenClient();
@@ -66,32 +76,26 @@ export const initializeGoogleApi = async (onLoad: () => void) => {
   });
 
   await Promise.all([gapiLoaded, gisLoaded]);
-  onLoad();
 };
 
 export const handleAuthClick = (): Promise<{ accessToken: string, email?: string }> => {
   return new Promise((resolve, reject) => {
     if (!CLIENT_ID) {
-      reject(new Error("Missing Client ID"));
-      return;
+      return reject(new Error("Missing Client ID"));
     }
 
-    // Ensure token client is initialized
     if (!tokenClient) {
         initTokenClient();
         if (!tokenClient) {
-             reject(new Error("Google Identity Services not initialized. Check internet connection or Client ID."));
-             return;
+             return reject(new Error("Google Identity Services not initialized. Please try refreshing the page."));
         }
     }
 
     tokenClient.callback = async (resp: any) => {
       if (resp.error) {
-        reject(resp);
-        return;
+        return reject(resp);
       }
       
-      // Attempt to get user info (email)
       let email = 'Google User';
       try {
         const userInfo = await gapi.client.drive.about.get({
@@ -105,8 +109,6 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
       resolve({ accessToken: resp.access_token, email });
     };
 
-    // Check if we have a valid gapi session (optional, mainly for consistency)
-    // We use tokenClient for the actual OAuth popup
     if (gapi.client.getToken() === null) {
       tokenClient.requestAccessToken({ prompt: 'consent' });
     } else {
