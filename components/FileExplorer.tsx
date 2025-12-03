@@ -62,29 +62,29 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ accessToken, onSelec
   return (
     <div className="flex flex-col h-[500px]">
       {/* Explorer Header */}
-      <div className="flex items-center gap-2 p-4 border-b bg-gray-50">
+      <div className="flex items-center gap-2 p-4 border-b border-slate-700 bg-slate-800">
         <button 
           onClick={handleGoBack} 
           disabled={currentPath.length === 1}
-          className="p-2 hover:bg-gray-200 rounded-full disabled:opacity-30 transition-colors"
+          className="p-2 hover:bg-slate-700 rounded-full disabled:opacity-30 transition-colors"
         >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+          <ArrowLeft className="w-5 h-5 text-slate-300" />
         </button>
-        <div className="flex-1 font-medium text-gray-700 truncate flex items-center gap-2">
-           <HardDrive className="w-4 h-4 text-gray-400" />
+        <div className="flex-1 font-medium text-slate-300 truncate flex items-center gap-2">
+           <HardDrive className="w-4 h-4 text-slate-400" />
            {currentPath.map(p => p.name).join(' / ')}
         </div>
       </div>
 
       {/* File List */}
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-white">
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-900">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full text-slate-500">
             <Loader2 className="w-8 h-8 animate-spin mb-2" />
             <p>Loading files...</p>
           </div>
         ) : files.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full text-slate-500">
              <Folder className="w-12 h-12 mb-2 opacity-20" />
              <p>This folder is empty</p>
           </div>
@@ -96,19 +96,19 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ accessToken, onSelec
                 onDoubleClick={() => handleDoubleClick(file)}
                 onClick={() => setSelectedFileId(file.id)}
                 className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors border border-transparent
-                  ${selectedFileId === file.id ? 'bg-blue-50 border-blue-200' : 'hover:bg-gray-50'}
+                  ${selectedFileId === file.id ? 'bg-blue-500/10 border-blue-500/20' : 'hover:bg-slate-800'}
                 `}
               >
                 {file.mimeType === 'application/vnd.google-apps.folder' ? (
-                  <Folder className={`w-6 h-6 ${selectedFileId === file.id ? 'text-blue-500 fill-blue-100' : 'text-gray-400 fill-gray-50'}`} />
+                  <Folder className={`w-6 h-6 ${selectedFileId === file.id ? 'text-blue-400 fill-blue-500/10' : 'text-slate-400 fill-slate-700/50'}`} />
                 ) : (
-                  <File className="w-6 h-6 text-gray-400" />
+                  <File className="w-6 h-6 text-slate-500" />
                 )}
-                <span className={`text-sm truncate flex-1 ${selectedFileId === file.id ? 'text-blue-700 font-medium' : 'text-gray-700'}`}>
+                <span className={`text-sm truncate flex-1 ${selectedFileId === file.id ? 'text-blue-300 font-medium' : 'text-slate-300'}`}>
                   {file.name}
                 </span>
                 {file.mimeType === 'application/vnd.google-apps.folder' && (
-                   <span className="text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded">Folder</span>
+                   <span className="text-xs text-slate-400 px-2 py-1 bg-slate-700 rounded">Folder</span>
                 )}
               </div>
             ))}
@@ -117,10 +117,10 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ accessToken, onSelec
       </div>
 
       {/* Footer Action */}
-      <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
+      <div className="p-4 border-t border-slate-700 bg-slate-800 flex justify-end gap-3">
         <button 
           onClick={onCancel}
-          className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 font-medium"
+          className="px-4 py-2 text-sm text-slate-300 hover:text-slate-100 font-medium"
         >
           Cancel
         </button>

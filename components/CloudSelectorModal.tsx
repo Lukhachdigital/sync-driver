@@ -74,36 +74,36 @@ export const CloudSelectorModal: React.FC<CloudSelectorModalProps> = ({
 
   const getIcon = (type: ProviderType) => {
     switch (type) {
-      case 'Google Drive': return <HardDrive className="w-8 h-8 text-blue-500" />;
-      case 'Dropbox': return <Box className="w-8 h-8 text-indigo-600" />;
-      case 'OneDrive': return <Cloud className="w-8 h-8 text-sky-500" />;
-      default: return <Server className="w-8 h-8 text-gray-500" />;
+      case 'Google Drive': return <HardDrive className="w-8 h-8 text-blue-400" />;
+      case 'Dropbox': return <Box className="w-8 h-8 text-indigo-400" />;
+      case 'OneDrive': return <Cloud className="w-8 h-8 text-sky-400" />;
+      default: return <Server className="w-8 h-8 text-gray-400" />;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 transition-opacity">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 transition-opacity">
+      <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-fade-in flex flex-col max-h-[90vh] border border-slate-700">
         
         {/* Header */}
-        <div className="bg-white px-6 py-4 border-b flex justify-between items-center sticky top-0 z-10">
+        <div className="bg-slate-800 px-6 py-4 border-b border-slate-700 flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center gap-3">
             {(view === 'add' || view === 'explorer') && (
-              <button onClick={handleBack} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <button onClick={handleBack} className="p-1 hover:bg-slate-700 rounded-full transition-colors">
+                <ArrowLeft className="w-5 h-5 text-slate-300" />
               </button>
             )}
-            <h3 className="text-lg font-semibold text-gray-800">
+            <h3 className="text-lg font-semibold text-slate-100">
               {view === 'add' ? 'Add Cloud Account' : view === 'explorer' ? 'Select Folder' : `Select ${side === 'source' ? 'Source' : 'Target'}`}
             </h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-full transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 p-1 hover:bg-slate-700 rounded-full transition-colors">
             ✕
           </button>
         </div>
         
         {/* Content */}
-        <div className="bg-slate-50 min-h-[400px] flex flex-col">
+        <div className="bg-slate-900 min-h-[400px] flex flex-col">
           
           {view === 'explorer' && activeDrive?.accessToken ? (
              <FileExplorer 
@@ -113,9 +113,9 @@ export const CloudSelectorModal: React.FC<CloudSelectorModalProps> = ({
              />
           ) : isConnecting ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] space-y-4">
-              <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
-              <p className="text-gray-600 font-medium">Connecting to Google Drive...</p>
-              <p className="text-sm text-gray-400">Please complete the authorization in the popup window.</p>
+              <Loader2 className="w-12 h-12 text-primary-500 animate-spin" />
+              <p className="text-slate-300 font-medium">Connecting to Google Drive...</p>
+              <p className="text-sm text-slate-500">Please complete the authorization in the popup window.</p>
             </div>
           ) : view === 'list' ? (
             <div className="p-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 overflow-y-auto">
@@ -124,23 +124,23 @@ export const CloudSelectorModal: React.FC<CloudSelectorModalProps> = ({
                 <button
                   key={drive.id}
                   onClick={() => handleDriveClick(drive)}
-                  className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group relative"
+                  className="flex flex-col items-center justify-center p-4 bg-slate-800 border border-slate-700 rounded-xl hover:border-primary-500 hover:shadow-md transition-all group relative"
                 >
-                  <div className="mb-3 p-3 bg-gray-50 rounded-full group-hover:scale-110 transition-transform">
+                  <div className="mb-3 p-3 bg-slate-700 rounded-full group-hover:scale-110 transition-transform">
                     {getIcon(drive.type)}
                   </div>
-                  <span className="font-medium text-gray-700 text-sm truncate w-full text-center">{drive.name}</span>
-                  <span className="text-xs text-gray-400 mt-1">{drive.email || 'Connected'}</span>
-                  <div className="mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</div>
+                  <span className="font-medium text-slate-200 text-sm truncate w-full text-center">{drive.name}</span>
+                  <span className="text-xs text-slate-400 mt-1">{drive.email || 'Connected'}</span>
+                  <div className="mt-2 text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full">Active</div>
                 </button>
               ))}
               
               {/* Add New Button */}
               <button 
                 onClick={handleAddClick}
-                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-primary-400 hover:bg-primary-50/50 text-gray-400 hover:text-primary-600 transition-all h-full min-h-[160px]"
+                className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-600 rounded-xl hover:border-primary-500 hover:bg-primary-500/10 text-slate-500 hover:text-primary-400 transition-all h-full min-h-[160px]"
               >
-                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-primary-100 transition-colors">
+                 <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center mb-2 group-hover:bg-primary-500/20 transition-colors">
                     <Plus className="w-6 h-6" />
                  </div>
                  <span className="text-sm font-medium">Add Cloud</span>
@@ -149,19 +149,19 @@ export const CloudSelectorModal: React.FC<CloudSelectorModalProps> = ({
           ) : (
             /* Add Cloud View */
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto">
-               <button onClick={() => handleConnect('Google Drive')} className="flex items-center p-4 bg-white border rounded-lg hover:shadow-md hover:border-primary-500 transition-all text-left group">
-                 <div className="p-2 bg-blue-50 rounded-lg mr-4 group-hover:bg-blue-100"><HardDrive className="w-6 h-6 text-blue-600" /></div>
+               <button onClick={() => handleConnect('Google Drive')} className="flex items-center p-4 bg-slate-800 border border-slate-700 rounded-lg hover:shadow-md hover:border-primary-500 transition-all text-left group">
+                 <div className="p-2 bg-blue-500/10 rounded-lg mr-4 group-hover:bg-blue-500/20"><HardDrive className="w-6 h-6 text-blue-400" /></div>
                  <div>
-                   <span className="block font-medium text-gray-800">Google Drive</span>
-                   <span className="text-xs text-gray-500">Personal & Business</span>
+                   <span className="block font-medium text-slate-100">Google Drive</span>
+                   <span className="text-xs text-slate-400">Personal & Business</span>
                  </div>
                </button>
                {/* Placeholders for others */}
-               <button disabled className="opacity-50 flex items-center p-4 bg-white border rounded-lg text-left group cursor-not-allowed">
-                 <div className="p-2 bg-indigo-50 rounded-lg mr-4"><Box className="w-6 h-6 text-indigo-600" /></div>
+               <button disabled className="opacity-50 flex items-center p-4 bg-slate-800 border border-slate-700 rounded-lg text-left group cursor-not-allowed">
+                 <div className="p-2 bg-indigo-500/10 rounded-lg mr-4"><Box className="w-6 h-6 text-indigo-400" /></div>
                  <div>
-                   <span className="block font-medium text-gray-800">Dropbox</span>
-                   <span className="text-xs text-gray-500">Coming Soon</span>
+                   <span className="block font-medium text-slate-100">Dropbox</span>
+                   <span className="text-xs text-slate-400">Coming Soon</span>
                  </div>
                </button>
             </div>
@@ -170,7 +170,7 @@ export const CloudSelectorModal: React.FC<CloudSelectorModalProps> = ({
         
         {/* Footer */}
         {view === 'list' && (
-          <div className="bg-gray-50 px-6 py-3 border-t text-xs text-gray-500 flex justify-between">
+          <div className="bg-slate-800 px-6 py-3 border-t border-slate-700 text-xs text-slate-400 flex justify-between">
              <span>Supported Clouds: Google Drive (Live), Dropbox (Soon)...</span>
           </div>
         )}
