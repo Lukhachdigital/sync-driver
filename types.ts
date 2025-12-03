@@ -35,9 +35,3 @@ export interface SyncTask {
   mode: SyncMode;
   isTwoWay: boolean;
 }
-
-export interface AnalysisResult {
-  title: string;
-  content: string;
-  riskLevel: 'low' | 'medium' | 'high';
-}
