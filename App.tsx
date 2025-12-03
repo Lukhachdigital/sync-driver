@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Edit3, Cloud, RefreshCw, Play, ArrowRight, Zap, Info, Loader2, Database, Trash2, Folder } from 'lucide-react';
 import { CloudProvider, SyncTask, SyncMode, ProviderType } from './types';
 import { CloudSelectorModal } from './components/CloudSelectorModal';
-import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId } from './services/googleDriveService';
+import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId, findFirstImageInFolder, copyFile } from './services/googleDriveService';
 
 const App: React.FC = () => {
   // State
@@ -23,6 +23,9 @@ const App: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeSelectionSide, setActiveSelectionSide] = useState<'source' | 'destination'>('source');
 
+  // Syncing State
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // Initialize Google API on mount
   useEffect(() => {
     const initApi = async () => {
@@ -42,6 +45,45 @@ const App: React.FC = () => {
   }, [googleClientId]);
 
   // Handlers
+  const handleSyncNow = async () => {
+    if (!source?.selectedFolder || !destination?.selectedFolder) {
+      alert("Please select both a source and a destination folder.");
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      // 1. Find the first image in the source folder
+      const imageToCopy = await findFirstImageInFolder(source.selectedFolder.id);
+
+      if (!imageToCopy) {
+        alert("No image files found in the source folder to sync.");
+        setIsSyncing(false);
+        return;
+      }
+
+      // 2. Copy the file to the destination folder
+      await copyFile(imageToCopy.id, destination.selectedFolder.id);
+
+      alert(`Successfully copied "${imageToCopy.name}" to the destination folder!`);
+
+    } catch (error) {
+      console.error("Sync failed:", error);
+      alert(`An error occurred during sync: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Effect for Real Time Sync
+  useEffect(() => {
+    if (syncMode === 'realtime' && source && destination && !isSyncing) {
+      console.log("Real-time sync triggered.");
+      handleSyncNow();
+    }
+  }, [syncMode, source, destination]);
+
+
   const openSelector = (side: 'source' | 'destination') => {
     setActiveSelectionSide(side);
     setModalOpen(true);
@@ -280,15 +322,25 @@ const App: React.FC = () => {
 
               <div className="flex items-center gap-4">
                  <button 
-                  disabled={!source || !destination}
-                  className={`flex items-center gap-2 px-8 py-3 rounded-lg font-semibold shadow-lg shadow-primary-500/20 transition-all transform active:scale-95
+                  onClick={handleSyncNow}
+                  disabled={!source || !destination || isSyncing}
+                  className={`flex items-center justify-center gap-2 px-8 py-3 rounded-lg font-semibold shadow-lg shadow-primary-500/20 transition-all transform active:scale-95 w-[150px]
                     ${source && destination 
                       ? 'bg-primary-600 hover:bg-primary-700 text-white cursor-pointer' 
                       : 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
                     }`}
                  >
-                    <Play className="w-4 h-4 fill-current" />
-                    Sync Now
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 fill-current" />
+                        Sync Now
+                      </>
+                    )}
                  </button>
               </div>
 
