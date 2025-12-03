@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Settings, Edit3, Cloud, RefreshCw, Play, ArrowRight, Zap, Info, Loader2, Database, Trash2, Folder } from 'lucide-react';
 import { CloudProvider, SyncTask, SyncMode, ProviderType } from './types';
 import { CloudSelectorModal } from './components/CloudSelectorModal';
-import { analyzeSyncTask } from './services/geminiService';
 import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId } from './services/googleDriveService';
 
 const App: React.FC = () => {
@@ -15,8 +14,6 @@ const App: React.FC = () => {
   const [destination, setDestination] = useState<CloudProvider | null>(null);
   
   const [isTwoWay, setIsTwoWay] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysis, setAnalysis] = useState<{ suggestion: string; tips: string[] } | null>(null);
   const [googleClientId, setGoogleClientId] = useState('320099579191-ahhkojashkfi035i99j5rpcdrofjltoj.apps.googleusercontent.com');
 
   // Store authenticated drives
@@ -46,10 +43,8 @@ const App: React.FC = () => {
   const handleSelectCloud = (provider: CloudProvider) => {
     if (activeSelectionSide === 'source') {
       setSource(provider);
-      setAnalysis(null);
     } else {
       setDestination(provider);
-      setAnalysis(null);
     }
     setModalOpen(false);
   };
@@ -78,20 +73,6 @@ const App: React.FC = () => {
     }
     return null;
   };
-
-  // AI Analysis Effect
-  useEffect(() => {
-    const runAnalysis = async () => {
-      if (source && destination) {
-        setIsAnalyzing(true);
-        const result = await analyzeSyncTask(source, destination, isTwoWay);
-        setAnalysis(result);
-        setIsAnalyzing(false);
-      }
-    };
-
-    runAnalysis();
-  }, [source, destination, isTwoWay]);
 
   return (
     <div className="min-h-screen bg-[#F4F7FA] text-slate-800 font-sans selection:bg-primary-100">
@@ -217,30 +198,6 @@ const App: React.FC = () => {
                  >
                    {isTwoWay ? 'Two-way Sync' : 'One-way Sync'}
                  </button>
-
-                  {/* AI Widget */}
-                  {(source && destination) && (
-                    <div className="w-64 animate-slide-up">
-                      <div className="bg-amber-50/80 border border-amber-100 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Zap className="w-4 h-4 text-amber-500 fill-current" />
-                          <span className="text-xs font-bold text-amber-800 uppercase tracking-wide">AI Analysis</span>
-                        </div>
-                        {isAnalyzing ? (
-                          <div className="flex items-center gap-2 text-xs text-amber-700">
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                            Checking compatibility...
-                          </div>
-                        ) : analysis ? (
-                          <div className="text-xs space-y-2">
-                            <p className="text-amber-900 font-medium leading-tight">{analysis.suggestion}</p>
-                            <div className="h-px bg-amber-200/50 w-full"></div>
-                            <p className="text-amber-700">{analysis.tips[0]}</p>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
               </div>
 
               {/* DESTINATION CARD */}
