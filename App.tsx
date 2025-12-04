@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Settings, Edit3, Cloud, RefreshCw, Play, ArrowRight, Zap, Info, Loader2, Database, Trash2, Folder } from 'lucide-react';
 import { CloudProvider, SyncTask, SyncMode, ProviderType } from './types';
 import { CloudSelectorModal } from './components/CloudSelectorModal';
-import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId, listImageFiles, copyFile, listFileNamesInFolder } from './services/googleDriveService';
+import { initializeGoogleApi, handleAuthClick, setClientId as setServiceClientId, listImageFiles, transferFile, listFileNamesInFolder } from './services/googleDriveService';
 
 const App: React.FC = () => {
   // State
@@ -41,8 +41,8 @@ const App: React.FC = () => {
   }, [googleClientId]);
 
   const handleSyncNow = async () => {
-    if (!source?.selectedFolder || !destination?.selectedFolder) {
-      console.warn("Sync cancelled: Source or destination folder not selected.");
+    if (!source?.selectedFolder || !destination?.selectedFolder || !source.accessToken || !destination.accessToken) {
+      console.warn("Sync cancelled: Source or destination folder/token not selected.");
       return;
     }
 
@@ -53,13 +53,13 @@ const App: React.FC = () => {
     
     setIsSyncing(true);
     try {
-      const sourceImages = await listImageFiles(source.selectedFolder.id);
+      const sourceImages = await listImageFiles(source.selectedFolder.id, source.accessToken);
       if (sourceImages.length === 0) {
         console.log("No image files found in the source folder to sync.");
         return;
       }
       
-      const destFileNames = await listFileNamesInFolder(destination.selectedFolder.id);
+      const destFileNames = await listFileNamesInFolder(destination.selectedFolder.id, destination.accessToken);
       const filesToCopy = sourceImages.filter(image => !destFileNames.has(image.name));
 
       if (filesToCopy.length === 0) {
@@ -68,11 +68,11 @@ const App: React.FC = () => {
       }
 
       console.log(`Syncing ${filesToCopy.length} new image(s)...`);
-      const copyPromises = filesToCopy.map(file => 
-        copyFile(file.id, file.name, destination.selectedFolder.id)
+      const transferPromises = filesToCopy.map(file => 
+        transferFile(file, destination.selectedFolder.id, source.accessToken!, destination.accessToken!)
       );
       
-      await Promise.all(copyPromises);
+      await Promise.all(transferPromises);
       console.log(`Successfully synced ${filesToCopy.length} new image(s) to the destination folder!`);
 
     } catch (error: any) {
@@ -124,8 +124,19 @@ const App: React.FC = () => {
       try {
         const authResult = await handleAuthClick();
         
+        // Check if a drive with this email already exists
+        const existingDrive = connectedDrives.find(drive => drive.email === authResult.email);
+        if (existingDrive) {
+            // Update existing drive's token and return it
+            const updatedDrives = connectedDrives.map(drive => 
+                drive.email === authResult.email ? { ...drive, accessToken: authResult.accessToken, isConnected: true } : drive
+            );
+            setConnectedDrives(updatedDrives);
+            return updatedDrives.find(drive => drive.email === authResult.email) || null;
+        }
+
         const newDrive: CloudProvider = {
-          id: `gd-${Date.now()}`,
+          id: `gd-${authResult.email}`, // Use email for a more stable ID
           name: 'Google Drive',
           type: 'Google Drive',
           email: authResult.email,
