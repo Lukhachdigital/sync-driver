@@ -19,12 +19,13 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ accessToken, onSelec
 
   useEffect(() => {
     loadFiles(currentFolder.id);
-  }, [currentFolder.id]);
+  }, [currentFolder.id, accessToken]);
 
   const loadFiles = async (folderId: string) => {
     setLoading(true);
     try {
-      const result = await listFiles(folderId);
+      // FIX: Pass the accessToken to the listFiles function.
+      const result = await listFiles(folderId, accessToken);
       setFiles(result);
     } catch (error) {
       console.error("Failed to load files", error);
