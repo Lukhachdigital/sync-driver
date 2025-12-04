@@ -6,7 +6,7 @@ declare var google: any;
 let CLIENT_ID = ''; 
 const API_KEY = ''; // Optional: Use if you have a public API key
 const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-// IMPORTANT: Changed scope to allow file creation/copying, not just reading.
+// IMPORTANT: Scope remains 'drive' to allow full file operations.
 const SCOPES = 'https://www.googleapis.com/auth/drive';
 
 let tokenClient: any = null;
@@ -35,6 +35,8 @@ const initTokenClient = () => {
 }
 
 export const initializeGoogleApi = async (): Promise<void> => {
+  // This function remains largely the same, setting up the global gapi/gis clients.
+  // The actual authentication token will be handled on a per-request basis.
   const gapiLoaded = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
         clearInterval(checkGapi);
@@ -92,12 +94,13 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
         }
     }
 
+    // This callback will provide a token specific to the user who just logged in.
     tokenClient.callback = async (resp: any) => {
       if (resp.error) {
         return reject(resp);
       }
       
-      // Set the token for gapi client to use
+      // Temporarily set the token to fetch user info for THIS login
       gapi.client.setToken({ access_token: resp.access_token });
       
       let email = 'Google User';
@@ -109,25 +112,33 @@ export const handleAuthClick = (): Promise<{ accessToken: string, email?: string
       } catch (e) {
         console.warn("Could not fetch user info", e);
       }
+      
+      // IMPORTANT: Clear the global token so we don't rely on it by mistake.
+      gapi.client.setToken(null);
 
       resolve({ accessToken: resp.access_token, email });
     };
 
-    if (gapi.client.getToken() === null) {
-      tokenClient.requestAccessToken({ prompt: 'consent' });
-    } else {
-      tokenClient.requestAccessToken({ prompt: '' });
-    }
+    tokenClient.requestAccessToken({ prompt: 'consent' });
   });
 };
 
-export const listFiles = async (folderId: string = 'root', queryExtra: string = '', fields: string = "nextPageToken, files(id, name, mimeType, iconLink, thumbnailLink)"): Promise<DriveFile[]> => {
+
+// All API calls now require an accessToken to be passed explicitly.
+export const listFiles = async (folderId: string = 'root', accessToken: string, queryExtra: string = '', fields: string = "nextPageToken, files(id, name, mimeType, iconLink, thumbnailLink)"): Promise<DriveFile[]> => {
   try {
-    const response = await gapi.client.drive.files.list({
-      'pageSize': 1000, // Increased page size for fewer calls
-      'fields': fields,
-      'q': `'${folderId}' in parents and trashed = false ${queryExtra}`,
-      'orderBy': 'folder, name'
+    const response = await gapi.client.request({
+      path: 'https://www.googleapis.com/drive/v3/files',
+      method: 'GET',
+      params: {
+        pageSize: 1000,
+        fields: fields,
+        q: `'${folderId}' in parents and trashed = false ${queryExtra}`,
+        orderBy: 'folder, name'
+      },
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     });
     return response.result.files || [];
   } catch (err) {
@@ -136,12 +147,12 @@ export const listFiles = async (folderId: string = 'root', queryExtra: string = 
   }
 };
 
-export const listImageFiles = async (folderId: string): Promise<DriveFile[]> => {
-  return await listFiles(folderId, "and mimeType contains 'image/'");
+export const listImageFiles = async (folderId: string, accessToken: string): Promise<DriveFile[]> => {
+  return await listFiles(folderId, accessToken, "and mimeType contains 'image/'");
 };
 
-export const listFileNamesInFolder = async (folderId: string): Promise<Set<string>> => {
-  const files = await listFiles(folderId, "", "files(name)");
+export const listFileNamesInFolder = async (folderId: string, accessToken: string): Promise<Set<string>> => {
+  const files = await listFiles(folderId, accessToken, "", "files(name)");
   const names = new Set<string>();
   if (files) {
     for (const file of files) {
@@ -153,18 +164,60 @@ export const listFileNamesInFolder = async (folderId: string): Promise<Set<strin
   return names;
 };
 
-export const copyFile = async (fileId: string, fileName: string, destinationFolderId: string): Promise<any> => {
+/**
+ * Transfers a file from a source account to a destination account.
+ * This is a two-step process: download from source, then upload to destination.
+ * A direct 'copy' is not possible across different Google accounts.
+ */
+export const transferFile = async (
+  sourceFile: DriveFile,
+  destinationFolderId: string,
+  sourceToken: string,
+  destinationToken: string
+): Promise<any> => {
   try {
-    const response = await gapi.client.drive.files.copy({
-      fileId: fileId,
-      resource: {
-        name: fileName,
-        parents: [destinationFolderId]
+    // Step 1: Download the file content from the source account
+    const downloadResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${sourceFile.id}?alt=media`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${sourceToken}`
       }
     });
-    return response.result;
+
+    if (!downloadResponse.ok) {
+      const errorText = await downloadResponse.text();
+      throw new Error(`Failed to download file: ${downloadResponse.statusText} - ${errorText}`);
+    }
+    const fileBlob = await downloadResponse.blob();
+
+    // Step 2: Upload the file content to the destination account
+    const metadata = {
+      name: sourceFile.name,
+      parents: [destinationFolderId],
+      mimeType: sourceFile.mimeType
+    };
+
+    const formData = new FormData();
+    formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    formData.append('file', fileBlob);
+
+    const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${destinationToken}`
+      },
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+       const errorText = await uploadResponse.text();
+       throw new Error(`Failed to upload file: ${uploadResponse.statusText} - ${errorText}`);
+    }
+
+    return await uploadResponse.json();
+
   } catch (err) {
-    console.error(`Error copying file: ${fileName} (ID: ${fileId}). Details:`, JSON.stringify(err, null, 2));
+    console.error(`Error transferring file: ${sourceFile.name} (ID: ${sourceFile.id}). Details:`, err);
     throw err;
   }
 };
